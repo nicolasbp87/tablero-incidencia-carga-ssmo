@@ -20,7 +20,7 @@ import streamlit as st
 st.set_page_config(page_title="Incidencia · Carga · Proyección — SSMO", layout="wide", page_icon="🎗️")
 
 COL_FUENTE = {"GLOBOCAN crudo": "#b0b7be", "GLOBOCAN directo": "#111111", "CECAN": "#8e44ad",
-              "Comité": "#c0392b", "Egresos": "#e08a1e", "Defunciones": "#7a7a7a"}
+              "GES/SIGES": "#16a085", "Comité": "#c0392b", "Egresos": "#e08a1e", "Defunciones": "#7a7a7a"}
 AZUL, ROJO, VERDE = "#2C6E9B", "#c0392b", "#16a085"
 
 
@@ -96,6 +96,9 @@ with tabs[0]:
             {"Cáncer": r["Cáncer"], "Fuente": "Egresos", "Casos/año": r["Egresos obs."]},
             {"Cáncer": r["Cáncer"], "Fuente": "Defunciones", "Casos/año": r["Defunc."]},
         ]
+        # GES/SIGES es un registro local FONASA -> solo tiene sentido en denominador beneficiaria
+        if _sfx == "Ben" and "GES/SIGES·Ben" in f.columns and pd.notna(r.get("GES/SIGES·Ben")):
+            fila.append({"Cáncer": r["Cáncer"], "Fuente": "GES/SIGES", "Casos/año": r["GES/SIGES·Ben"]})
     lf = pd.DataFrame(fila).dropna(subset=["Casos/año"])
     orden = f.sort_values(f"CECAN·{_sfx}", ascending=False)["Cáncer"].tolist()
     fig = px.bar(lf, x="Cáncer", y="Casos/año", color="Fuente", barmode="group",
@@ -104,9 +107,12 @@ with tabs[0]:
     fig.update_layout(height=520, legend=dict(orientation="h", y=1.08), margin=dict(t=60, b=10))
     st.plotly_chart(fig, use_container_width=True)
     st.info("Las estimaciones **modeladas** (GLOBOCAN, CECAN) y las **observadas** (comité, egresos, "
-            "defunciones) miden cosas distintas. **CECAN** (modelo local) suele salir alto; **comité** solo "
-            "capta lo que pasa por él (los **fuera de cartera** — pulmón, vejiga — no tienen barra de comité); "
-            "**egresos** son hospitalizaciones (sobrecuentan). Reportar el **rango entre fuentes**, no un valor único.")
+            "defunciones, **GES/SIGES**) miden cosas distintas. **CECAN** (modelo local) suele salir alto; "
+            "**GES/SIGES** (registro local FONASA; solo con denominador *beneficiaria*) valida a mama "
+            "(≈ CECAN) pero en **cérvix incluye lesiones preinvasoras** (no cáncer invasor) y en gástrico "
+            "parece subcaptar; **comité** solo capta lo que pasa por él (los **fuera de cartera** — pulmón, "
+            "vejiga — no tienen barra de comité); **egresos** son hospitalizaciones (sobrecuentan). Reportar "
+            "el **rango entre fuentes**, no un valor único.")
     st.dataframe(f.set_index("Cáncer"), use_container_width=True)
 
 # ---------------------------------------------------------------- Tab 2: prevalencia
